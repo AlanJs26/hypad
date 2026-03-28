@@ -6,15 +6,30 @@ use crate::errors::AppError;
 pub struct WindowSelector {
     pub class_pattern: Option<String>,
     pub title_pattern: Option<String>,
+    pub on_no_match: Option<String>,
 }
 
 impl WindowSelector {
-    pub fn new(class_pattern: Option<String>, title_pattern: Option<String>) -> Result<Self, AppError> {
+    pub fn new(
+        class_pattern: Option<String>,
+        title_pattern: Option<String>,
+        on_no_match: Option<String>,
+    ) -> Result<Self, AppError> {
         if class_pattern.is_none() && title_pattern.is_none() {
             return Err(AppError::InvalidSelector(
                 "at least one selector is required (--class or --title)".to_string(),
             ));
         }
+
+        let on_no_match = match on_no_match {
+            Some(command) if command.trim().is_empty() => {
+                return Err(AppError::InvalidSelector(
+                    "invalid --on-no-match: command cannot be empty".to_string(),
+                ));
+            }
+            Some(command) => Some(command),
+            None => None,
+        };
 
         if let Some(pattern) = class_pattern.as_ref() {
             Regex::new(pattern).map_err(|err| AppError::InvalidSelector(format!("invalid --class regex: {err}")))?;
@@ -27,6 +42,7 @@ impl WindowSelector {
         Ok(Self {
             class_pattern,
             title_pattern,
+            on_no_match,
         })
     }
 

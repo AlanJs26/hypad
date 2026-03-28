@@ -10,6 +10,7 @@ Working project in CLI + daemon (`serve`) mode with local IPC.
 
 Implemented features:
 - `register`, `hide`, `show`, `toggle`, `status`, `list`, `unregister`
+- `on-no-match` fallback command for `show` and `toggle`
 - resident daemon mode: `serve start|status|reload|stop`
 - load groups from TOML file
 - lock/pid files to prevent multiple daemon instances
@@ -39,10 +40,10 @@ cargo run -- <command>
 Operational commands:
 
 ```bash
-hypad register <id> --class <regex> [--title <regex>]
+hypad register <id> --class <regex> [--title <regex>] [--on-no-match "<shell-command>"]
 hypad hide <id> [--class <regex>] [--title <regex>]
-hypad show <id> [--class <regex>] [--title <regex>]
-hypad toggle <id> [--class <regex>] [--title <regex>]
+hypad show <id> [--class <regex>] [--title <regex>] [--on-no-match "<shell-command>"]
+hypad toggle <id> [--class <regex>] [--title <regex>] [--on-no-match "<shell-command>"]
 hypad status <id> [--class <regex>] [--title <regex>]
 hypad list
 hypad unregister <id>
@@ -98,6 +99,7 @@ version = 1
 
 [groups.calc]
 class = "qalculate-gtk"
+on_no_match = "qalculate-gtk"
 
 [groups.browser]
 class = "firefox|chromium"
@@ -112,6 +114,14 @@ Current schema rules:
 - each group is defined under `[groups.<id>]`
 - each group must have at least one selector: `class` and/or `title`
 - `class` and `title` are validated as regex on load
+- `on_no_match` is optional and must be a non-empty shell command when present
+
+`on_no_match` behavior:
+- only `show` and `toggle` trigger `on_no_match`
+- command is executed via `sh -c` in background
+- when fallback is successfully spawned, the main command returns success
+- `hide` and `status` keep returning `no windows found` when there are no matches
+- when using `--on-no-match` inline, you must also provide `--class` or `--title`
 
 When using TOML:
 - `serve start --config <file>` loads groups on startup
@@ -138,6 +148,7 @@ Behavior:
 - `hide`: moves group windows to `special:scratchpad-hidden` using `movetoworkspacesilent`
 - `show`: moves group windows to the active workspace
 - `toggle`: switches between `hide/show` based on current window state
+- `show`/`toggle` with no matching windows can launch `on_no_match` in background
 - window matching uses regex on `class` and `title` via `hyprctl -j clients`
 
 ## Project Structure
@@ -184,6 +195,7 @@ Invalid selector error:
 
 No windows found:
 - check `hyprctl -j clients` and adjust regex to real `class/title` values
+- if `on_no_match` is configured for that group, `show`/`toggle` will launch it instead of returning `NoWindowsFound`
 
 ## License
 

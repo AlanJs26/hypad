@@ -14,8 +14,13 @@ pub struct App {
 impl App {
     pub fn execute(&mut self, command: AppCommand) -> Result<String, AppError> {
         match command {
-            AppCommand::Register { id, class, title } => {
-                let selector = selector_from_options(class, title, true)?
+            AppCommand::Register {
+                id,
+                class,
+                title,
+                on_no_match,
+            } => {
+                let selector = selector_from_options(class, title, on_no_match, true)?
                     .ok_or_else(|| {
                         AppError::InvalidSelector(
                             "at least one selector is required (--class or --title)".to_string(),
@@ -23,20 +28,40 @@ impl App {
                     })?;
                 usecases::register_group(&mut self.state, id, selector)
             }
-            AppCommand::Hide { id, class, title } => {
-                let selector = selector_from_options(class, title, false)?;
+            AppCommand::Hide {
+                id,
+                class,
+                title,
+                on_no_match,
+            } => {
+                let selector = selector_from_options(class, title, on_no_match, false)?;
                 usecases::hide_group(&self.gateway, &self.state, &id, selector)
             }
-            AppCommand::Show { id, class, title } => {
-                let selector = selector_from_options(class, title, false)?;
+            AppCommand::Show {
+                id,
+                class,
+                title,
+                on_no_match,
+            } => {
+                let selector = selector_from_options(class, title, on_no_match, false)?;
                 usecases::show_group(&self.gateway, &self.state, &id, selector)
             }
-            AppCommand::Toggle { id, class, title } => {
-                let selector = selector_from_options(class, title, false)?;
+            AppCommand::Toggle {
+                id,
+                class,
+                title,
+                on_no_match,
+            } => {
+                let selector = selector_from_options(class, title, on_no_match, false)?;
                 usecases::toggle_group(&self.gateway, &self.state, &id, selector)
             }
-            AppCommand::Status { id, class, title } => {
-                let selector = selector_from_options(class, title, false)?;
+            AppCommand::Status {
+                id,
+                class,
+                title,
+                on_no_match,
+            } => {
+                let selector = selector_from_options(class, title, on_no_match, false)?;
                 usecases::status_group(&self.gateway, &self.state, &id, selector)
             }
             AppCommand::List => Ok(usecases::list_groups(&self.state)),
@@ -56,9 +81,16 @@ impl App {
 fn selector_from_options(
     class: Option<String>,
     title: Option<String>,
+    on_no_match: Option<String>,
     required: bool,
 ) -> Result<Option<WindowSelector>, AppError> {
     if class.is_none() && title.is_none() {
+        if on_no_match.is_some() {
+            return Err(AppError::InvalidSelector(
+                "--on-no-match requires --class or --title when used inline".to_string(),
+            ));
+        }
+
         if required {
             return Err(AppError::InvalidSelector(
                 "at least one selector is required (--class or --title)".to_string(),
@@ -67,5 +99,5 @@ fn selector_from_options(
         return Ok(None);
     }
 
-    Ok(Some(WindowSelector::new(class, title)?))
+    Ok(Some(WindowSelector::new(class, title, on_no_match)?))
 }

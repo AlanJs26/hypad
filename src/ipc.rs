@@ -9,26 +9,31 @@ pub enum AppCommand {
         id: String,
         class: Option<String>,
         title: Option<String>,
+        on_no_match: Option<String>,
     },
     Hide {
         id: String,
         class: Option<String>,
         title: Option<String>,
+        on_no_match: Option<String>,
     },
     Show {
         id: String,
         class: Option<String>,
         title: Option<String>,
+        on_no_match: Option<String>,
     },
     Toggle {
         id: String,
         class: Option<String>,
         title: Option<String>,
+        on_no_match: Option<String>,
     },
     Status {
         id: String,
         class: Option<String>,
         title: Option<String>,
+        on_no_match: Option<String>,
     },
     List,
     Unregister {

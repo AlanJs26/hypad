@@ -65,4 +65,6 @@ pub struct SelectorArgs {
     pub class: Option<String>,
     #[arg(long)]
     pub title: Option<String>,
+    #[arg(long)]
+    pub on_no_match: Option<String>,
 }

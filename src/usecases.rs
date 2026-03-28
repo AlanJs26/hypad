@@ -2,6 +2,7 @@ use crate::domain::{WindowInfo, WindowSelector};
 use crate::errors::AppError;
 use crate::hypr::{HyprGateway, HyprctlGateway};
 use crate::state::RuntimeState;
+use std::process::{Command, Stdio};
 
 pub const HIDDEN_SPECIAL_WORKSPACE: &str = "special:scratchpad-hidden";
 
@@ -32,13 +33,37 @@ fn resolve_windows(
 ) -> Result<(WindowSelector, Vec<WindowInfo>), AppError> {
     let selector = resolve_selector(state, id, selector)?;
     let windows = gateway.find_matching_windows(&selector)?;
-
-    if windows.is_empty() {
-        let detail = format!("id={id}, class={:?}, title={:?}", selector.class_pattern, selector.title_pattern);
-        return Err(AppError::NoWindowsFound(detail));
-    }
-
     Ok((selector, windows))
+}
+
+fn no_windows_detail(id: &str, selector: &WindowSelector) -> String {
+    format!(
+        "id={id}, class={:?}, title={:?}",
+        selector.class_pattern, selector.title_pattern
+    )
+}
+
+fn spawn_on_no_match(id: &str, action: &str, selector: &WindowSelector) -> Result<Option<String>, AppError> {
+    let Some(command) = selector.on_no_match.as_ref() else {
+        return Ok(None);
+    };
+
+    Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|err| {
+            AppError::CommandFailed(format!(
+                "failed to spawn on-no-match command for '{id}' ({action}): {err}"
+            ))
+        })?;
+
+    Ok(Some(format!(
+        "no windows matched for '{id}' during '{action}', launched on-no-match command in background"
+    )))
 }
 
 pub fn register_group(state: &mut RuntimeState, id: String, selector: WindowSelector) -> Result<String, AppError> {
@@ -64,8 +89,12 @@ pub fn list_groups(state: &RuntimeState) -> String {
 
     for group in state.list() {
         lines.push(format!(
-            "- {} -> source={:?} class={:?} title={:?}",
-            group.id, group.source, group.selector.class_pattern, group.selector.title_pattern
+            "- {} -> source={:?} class={:?} title={:?} on_no_match={:?}",
+            group.id,
+            group.source,
+            group.selector.class_pattern,
+            group.selector.title_pattern,
+            group.selector.on_no_match
         ));
     }
 
@@ -82,7 +111,11 @@ pub fn hide_group(
     id: &str,
     selector: Option<WindowSelector>,
 ) -> Result<String, AppError> {
-    let (_, windows) = resolve_windows(gateway, state, id, selector)?;
+    let (selector, windows) = resolve_windows(gateway, state, id, selector)?;
+    if windows.is_empty() {
+        return Err(AppError::NoWindowsFound(no_windows_detail(id, &selector)));
+    }
+
     let addresses = windows.into_iter().map(|w| w.address).collect::<Vec<_>>();
 
     gateway.move_to_workspace_target_silent(HIDDEN_SPECIAL_WORKSPACE, &addresses)?;
@@ -100,7 +133,15 @@ pub fn show_group(
     id: &str,
     selector: Option<WindowSelector>,
 ) -> Result<String, AppError> {
-    let (_, windows) = resolve_windows(gateway, state, id, selector)?;
+    let (selector, windows) = resolve_windows(gateway, state, id, selector)?;
+    if windows.is_empty() {
+        if let Some(message) = spawn_on_no_match(id, "show", &selector)? {
+            return Ok(message);
+        }
+
+        return Err(AppError::NoWindowsFound(no_windows_detail(id, &selector)));
+    }
+
     let active_workspace = gateway.active_workspace_id()?;
     let addresses = windows.into_iter().map(|w| w.address).collect::<Vec<_>>();
 
@@ -119,7 +160,15 @@ pub fn toggle_group(
     id: &str,
     selector: Option<WindowSelector>,
 ) -> Result<String, AppError> {
-    let (_, windows) = resolve_windows(gateway, state, id, selector)?;
+    let (selector, windows) = resolve_windows(gateway, state, id, selector)?;
+    if windows.is_empty() {
+        if let Some(message) = spawn_on_no_match(id, "toggle", &selector)? {
+            return Ok(message);
+        }
+
+        return Err(AppError::NoWindowsFound(no_windows_detail(id, &selector)));
+    }
+
     let addresses = windows.iter().map(|w| w.address.clone()).collect::<Vec<_>>();
 
     let all_hidden = windows
@@ -153,6 +202,9 @@ pub fn status_group(
     selector: Option<WindowSelector>,
 ) -> Result<String, AppError> {
     let (selector, windows) = resolve_windows(gateway, state, id, selector)?;
+    if windows.is_empty() {
+        return Err(AppError::NoWindowsFound(no_windows_detail(id, &selector)));
+    }
 
     let hidden = windows
         .iter()
@@ -162,13 +214,14 @@ pub fn status_group(
     let visible = windows.len().saturating_sub(hidden);
 
     Ok(format!(
-        "status '{}' -> total={} visible={} hidden={} hidden_target={} class={:?} title={:?}",
+        "status '{}' -> total={} visible={} hidden={} hidden_target={} class={:?} title={:?} on_no_match={:?}",
         id,
         windows.len(),
         visible,
         hidden,
         HIDDEN_SPECIAL_WORKSPACE,
         selector.class_pattern,
-        selector.title_pattern
+        selector.title_pattern,
+        selector.on_no_match
     ))
 }

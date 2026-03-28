@@ -17,6 +17,7 @@ struct ConfigFile {
 struct ConfigGroup {
     class: Option<String>,
     title: Option<String>,
+    on_no_match: Option<String>,
 }
 
 pub fn load_groups(path: &Path) -> Result<Vec<(String, WindowSelector)>, AppError> {
@@ -33,7 +34,7 @@ pub fn load_groups(path: &Path) -> Result<Vec<(String, WindowSelector)>, AppErro
 
     let mut groups = Vec::with_capacity(parsed.groups.len());
     for (id, group) in parsed.groups {
-        let selector = WindowSelector::new(group.class, group.title)
+        let selector = WindowSelector::new(group.class, group.title, group.on_no_match)
             .map_err(|err| AppError::Config(format!("group '{id}': {err}")))?;
         groups.push((id, selector));
     }

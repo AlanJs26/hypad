@@ -2,6 +2,7 @@ version = 1
 
 [groups.calc]
 class = "qalculate-gtk"
+on_no_match = "qalculate-gtk"
 
 [groups.browser]
 class = "firefox|chromium"
