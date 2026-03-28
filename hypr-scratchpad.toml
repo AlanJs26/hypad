@@ -1,0 +1,7 @@
+version = 1
+
+[groups.calc]
+class = "qalculate-gtk"
+
+[groups.browser]
+class = "firefox|chromium"
