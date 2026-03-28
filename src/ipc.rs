@@ -98,9 +98,9 @@ fn runtime_dir() -> PathBuf {
 
 fn base_file_name(ext: &str) -> String {
     if std::env::var("XDG_RUNTIME_DIR").is_ok() {
-        return format!("hypr-scratchpad.{ext}");
+        return format!("hypad.{ext}");
     }
 
     let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_string());
-    format!("hypr-scratchpad-{user}.{ext}")
+    format!("hypad-{user}.{ext}")
 }

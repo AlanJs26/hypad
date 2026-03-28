@@ -1,4 +1,4 @@
-# hyprland-scrachpad
+# hypad
 
 Scratchpad CLI for Hyprland using one dedicated hidden `special workspace`.
 
@@ -39,28 +39,28 @@ cargo run -- <command>
 Operational commands:
 
 ```bash
-hyprland-scrachpad register <id> --class <regex> [--title <regex>]
-hyprland-scrachpad hide <id> [--class <regex>] [--title <regex>]
-hyprland-scrachpad show <id> [--class <regex>] [--title <regex>]
-hyprland-scrachpad toggle <id> [--class <regex>] [--title <regex>]
-hyprland-scrachpad status <id> [--class <regex>] [--title <regex>]
-hyprland-scrachpad list
-hyprland-scrachpad unregister <id>
+hypad register <id> --class <regex> [--title <regex>]
+hypad hide <id> [--class <regex>] [--title <regex>]
+hypad show <id> [--class <regex>] [--title <regex>]
+hypad toggle <id> [--class <regex>] [--title <regex>]
+hypad status <id> [--class <regex>] [--title <regex>]
+hypad list
+hypad unregister <id>
 ```
 
 Daemon commands:
 
 ```bash
-hyprland-scrachpad serve start [--config hypr-scratchpad.toml]
-hyprland-scrachpad serve status
-hyprland-scrachpad serve reload
-hyprland-scrachpad serve stop
+hypad serve start [--config hypad.toml]
+hypad serve status
+hypad serve reload
+hypad serve stop
 ```
 
 Local mode (without daemon):
 
 ```bash
-hyprland-scrachpad --local <operational-command>
+hypad --local <operational-command>
 ```
 
 Notes:
@@ -72,7 +72,7 @@ Notes:
 1. Start the daemon:
 
 ```bash
-cargo run -- serve start --config hypr-scratchpad.toml
+cargo run -- serve start --config hypad.toml
 ```
 
 2. In another terminal, run commands:
@@ -91,7 +91,7 @@ cargo run -- serve stop
 
 ## TOML Configuration
 
-Example (`hypr-scratchpad.toml`):
+Example (`hypad.toml`):
 
 ```toml
 version = 1
@@ -120,13 +120,13 @@ When using TOML:
 ## Lock/PID and Socket
 
 The daemon creates runtime files on startup:
-- socket IPC: `hypr-scratchpad.sock`
-- pid file: `hypr-scratchpad.pid`
-- lock file: `hypr-scratchpad.lock`
+- socket IPC: `hypad.sock`
+- pid file: `hypad.pid`
+- lock file: `hypad.lock`
 
 Path resolution:
-- if `XDG_RUNTIME_DIR` exists: `${XDG_RUNTIME_DIR}/hypr-scratchpad.{sock|pid|lock}`
-- fallback: `/tmp/hypr-scratchpad-$USER.{sock|pid|lock}`
+- if `XDG_RUNTIME_DIR` exists: `${XDG_RUNTIME_DIR}/hypad.{sock|pid|lock}`
+- fallback: `/tmp/hypad-$USER.{sock|pid|lock}`
 
 Behavior:
 - if a live PID exists, a second daemon instance is blocked
@@ -176,7 +176,7 @@ cargo run -- serve status
 If it is not running, start it:
 
 ```bash
-cargo run -- serve start --config hypr-scratchpad.toml
+cargo run -- serve start --config hypad.toml
 ```
 
 Invalid selector error:

@@ -1,8 +1,8 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
-#[command(name = "hypr-scratchpad")]
-#[command(about = "CLI scratchpad manager for Hyprland (without special workspaces)")]
+#[command(name = "hypad")]
+#[command(about = "CLI scratchpad manager for Hyprland")]
 pub struct Cli {
     #[arg(long)]
     pub local: bool,
