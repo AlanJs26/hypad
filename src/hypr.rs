@@ -9,7 +9,11 @@ pub trait HyprGateway {
     fn list_clients(&self) -> Result<Vec<WindowInfo>, AppError>;
     fn active_workspace_id(&self) -> Result<i32, AppError>;
     fn move_to_workspace(&self, workspace_id: i32, addresses: &[String]) -> Result<(), AppError>;
-    fn move_to_workspace_target_silent(&self, workspace_target: &str, addresses: &[String]) -> Result<(), AppError>;
+    fn move_to_workspace_target_silent(
+        &self,
+        workspace_target: &str,
+        addresses: &[String],
+    ) -> Result<(), AppError>;
 }
 
 #[derive(Debug, Default)]
@@ -47,7 +51,24 @@ impl HyprctlGateway {
         Ok(())
     }
 
-    pub fn find_matching_windows(&self, selector: &WindowSelector) -> Result<Vec<WindowInfo>, AppError> {
+    fn dispatch_alterzorder(&self, position: &str, window_address: &str) -> Result<(), AppError> {
+        let target = format!("{position},address:{window_address}");
+        let output = Command::new("hyprctl")
+            .args(["dispatch", "alterzorder", &target])
+            .output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            return Err(AppError::CommandFailed(stderr));
+        }
+
+        Ok(())
+    }
+
+    pub fn find_matching_windows(
+        &self,
+        selector: &WindowSelector,
+    ) -> Result<Vec<WindowInfo>, AppError> {
         let clients = self.list_clients()?;
         let matches = clients
             .into_iter()
@@ -97,10 +118,18 @@ impl HyprGateway for HyprctlGateway {
     }
 
     fn move_to_workspace(&self, workspace_id: i32, addresses: &[String]) -> Result<(), AppError> {
-        self.dispatch_move("movetoworkspace", &workspace_id.to_string(), addresses)
+        self.dispatch_move("movetoworkspace", &workspace_id.to_string(), addresses)?;
+        if let Some(a) = addresses.first() {
+            self.dispatch_alterzorder("top", a.as_str())?;
+        };
+        Ok(())
     }
 
-    fn move_to_workspace_target_silent(&self, workspace_target: &str, addresses: &[String]) -> Result<(), AppError> {
+    fn move_to_workspace_target_silent(
+        &self,
+        workspace_target: &str,
+        addresses: &[String],
+    ) -> Result<(), AppError> {
         self.dispatch_move("movetoworkspacesilent", workspace_target, addresses)
     }
 }
